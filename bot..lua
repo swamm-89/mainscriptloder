@@ -78,68 +78,61 @@ MainTab:CreateButton({
 -- Check Verification Status Button (Manual Check)
 MainTab:CreateButton({
     Name = "🔍 Check Verification Status",
-    Callback = function()
+     Callback = function()
+    Rayfield:Notify({
+        Title = "Checking...",
+        Content = "Please wait",
+        Duration = 3
+    })
+
+    local success, res = pcall(function()
+        return game:HttpGet(MAIN_API_URL .. "/check/" .. player.UserId, true)
+    end)
+
+    if not success then
         Rayfield:Notify({
-            Title = "Checking...",
-            Content = "Please wait",
-            Duration = 3
+            Title = "Error",
+            Content = "Server connection failed",
+            Duration = 6
+        })
+        return
+    end
+
+    local data = HttpService:JSONDecode(res)
+
+    local verified = data.verified or "pending"
+
+    if verified == "approved" then
+        StatusLabel:Set("Status: Approved")
+        StatusDot:Set("🟢 Approved")
+
+        Rayfield:Notify({
+            Title = "✅ Approved!",
+            Content = "Loading Full Script...",
+            Duration = 5
         })
 
-        local success, res = pcall(function()
-            return game:HttpGet(MAIN_API_URL .. "/check/" .. player.UserId, true)
+        pcall(function()
+            local finalCode = game:HttpGet(FINAL_SCRIPT_URL, true)
+            loadstring(finalCode)()
         end)
 
-        if not success then
-            Rayfield:Notify({
-                Title = "Error",
-                Content = "Server connection failed",
-                Duration = 6
-            })
-            return
-        end
+    elseif verified == "rejected" then
+        StatusLabel:Set("Status: Request Rejected")
+        StatusDot:Set("🔴 Rejected")
+        Rayfield:Notify({
+            Title = "❌ Rejected",
+            Content = "Contact admin for more info",
+            Duration = 10
+        })
 
-        local data = HttpService:JSONDecode(res)
-
-        if data.banned then
-            StatusLabel:Set("Status: Banned")
-            StatusDot:Set("🔴 Banned")
-            Rayfield:Notify({ Title = "Banned", Content = "You are banned", Duration = 6 })
-            return
-        end
-
-        local verified = data.verified or "pending"
-
-        if verified == "approved" then
-            StatusLabel:Set("Status: Approved")
-            StatusDot:Set("🟢 Approved")
-            Rayfield:Notify({
-                Title = "✅ Approved!",
-                Content = "Loading Full Script...",
-                Duration = 5
-            })
-
-            pcall(function()
-                local finalCode = game:HttpGet(FINAL_SCRIPT_URL, true)
-                loadstring(finalCode)()
-            end)
-
-        elseif verified == "rejected" then
-            StatusLabel:Set("Status: Request Rejected")
-            StatusDot:Set("🔴 Rejected")
-            Rayfield:Notify({
-                Title = "❌ Rejected",
-                Content = "Your verification was rejected.\nContact admin.",
-                Duration = 10
-            })
-
-        else
-            StatusLabel:Set("Status: Waiting for Approval")
-            StatusDot:Set("🟡 Pending")
-            Rayfield:Notify({
-                Title = "⏳ Pending",
-                Content = "Admin ne abhi approve nahi kiya",
-                Duration = 6
-            })
-        end
-    end,
-})
+    else
+        StatusLabel:Set("Status: Waiting for Approval")
+        StatusDot:Set("🟡 Pending")
+        Rayfield:Notify({
+            Title = "⏳ Pending",
+            Content = "Admin ne abhi approve nahi kiya",
+            Duration = 6
+        })
+    end
+end,
